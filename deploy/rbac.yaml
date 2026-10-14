@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: store-orchestrator
+  namespace: default
+  labels:
+    app: store-orchestrator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: store-orchestrator
+  labels:
+    app: store-orchestrator
+rules:
+# Namespace management
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["create", "get", "list", "delete"]
+
+# Store resource management (within created namespaces)
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets"]
+  verbs: ["create", "get", "list", "update", "delete", "watch"]
+
+- apiGroups: [""]
+  resources: ["services", "secrets", "persistentvolumeclaims", "configmaps"]
+  verbs: ["create", "get", "list", "update", "delete", "watch"]
+
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["create", "get", "list", "update", "delete", "watch"]
+
+# ResourceQuota and LimitRange management
+- apiGroups: [""]
+  resources: ["resourcequotas", "limitranges"]
+  verbs: ["create", "get", "list", "update", "delete"]
+
+# NetworkPolicy management
+- apiGroups: ["networking.k8s.io"]
+  resources: ["networkpolicies"]
+  verbs: ["create", "get", "list", "update", "delete"]
+
+# Pod monitoring (for health checks)
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+
+# Events (for debugging)
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: store-orchestrator
+  labels:
+    app: store-orchestrator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: store-orchestrator
+subjects:
+- kind: ServiceAccount
+  name: store-orchestrator
+  namespace: default

@@ -1,0 +1,50 @@
+{{- if .Values.resourceQuota.enabled }}
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: store-quota
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app: store
+    store: "{{ .Values.store.id }}"
+spec:
+  hard:
+    requests.cpu: "{{ .Values.resourceQuota.requests.cpu }}"
+    requests.memory: "{{ .Values.resourceQuota.requests.memory }}"
+    limits.cpu: "{{ .Values.resourceQuota.limits.cpu }}"
+    limits.memory: "{{ .Values.resourceQuota.limits.memory }}"
+    persistentvolumeclaims: "{{ .Values.resourceQuota.persistentvolumeclaims }}"
+    requests.storage: "{{ .Values.resourceQuota.requests.storage }}"
+    pods: "{{ .Values.resourceQuota.pods }}"
+{{- end }}
+---
+{{- if .Values.limitRange.enabled }}
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: store-limits
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app: store
+    store: "{{ .Values.store.id }}"
+spec:
+  limits:
+  - max:
+      cpu: "{{ .Values.limitRange.container.max.cpu }}"
+      memory: "{{ .Values.limitRange.container.max.memory }}"
+    min:
+      cpu: "{{ .Values.limitRange.container.min.cpu }}"
+      memory: "{{ .Values.limitRange.container.min.memory }}"
+    default:
+      cpu: "{{ .Values.limitRange.container.default.cpu }}"
+      memory: "{{ .Values.limitRange.container.default.memory }}"
+    defaultRequest:
+      cpu: "{{ .Values.limitRange.container.defaultRequest.cpu }}"
+      memory: "{{ .Values.limitRange.container.defaultRequest.memory }}"
+    type: Container
+  - max:
+      storage: "{{ .Values.limitRange.pvc.max.storage }}"
+    min:
+      storage: "{{ .Values.limitRange.pvc.min.storage }}"
+    type: PersistentVolumeClaim
+{{- end }}

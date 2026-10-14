@@ -1,0 +1,139 @@
+# Default values for mcp-platform (Local Development)
+# This deploys the Gateway, Dashboard, and all upstream MCP servers into the cluster.
+
+domain: "127.0.0.1.nip.io"
+
+# Gateway Backend
+gateway:
+  name: "mcp-gateway"
+  replicaCount: 1
+  image:
+    repository: "mcp-gateway"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "ClusterIP"
+    port: 3001
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+  env:
+    PORT: "3001"
+    UPSTREAM_TIMEOUT: "15000"
+    HEALTH_CHECK_INTERVAL: "30000"
+    WC_MCP_URL: "http://woocommerce-mcp:3002/mcp"
+    TIME_MCP_URL: "http://time-mcp:3003/mcp"
+    CALC_MCP_URL: "http://calculator-mcp:3004/mcp"
+
+# Frontend Dashboard
+frontend:
+  name: "mcp-frontend"
+  replicaCount: 1
+  image:
+    repository: "mcp-frontend"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "ClusterIP"
+    port: 80
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "128Mi"
+
+# WooCommerce MCP Server (Internal Only)
+woocommerceMcp:
+  name: "woocommerce-mcp"
+  replicaCount: 1
+  image:
+    repository: "woocommerce-mcp-server"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "ClusterIP"
+    port: 3002
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "300m"
+      memory: "256Mi"
+  env:
+    PORT: "3002"
+    WC_URL: "http://wordpress.ns-store-default.svc.cluster.local:80"
+
+# Time & Utility MCP Server (Internal Only)
+timeMcp:
+  name: "time-mcp"
+  replicaCount: 1
+  image:
+    repository: "time-mcp-server"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "ClusterIP"
+    port: 3003
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "128Mi"
+  env:
+    PORT: "3003"
+
+# Calculator MCP Server (Internal Only)
+calculatorMcp:
+  name: "calculator-mcp"
+  replicaCount: 1
+  image:
+    repository: "calculator-mcp-server"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "ClusterIP"
+    port: 3004
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "128Mi"
+  env:
+    PORT: "3004"
+
+# Ingress Configuration (Stable URLs)
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+  dashboardHost: "dashboard.127.0.0.1.nip.io"
+  gatewayHost: "gateway.127.0.0.1.nip.io"
+  tls:
+    enabled: false
+    secretName: ""
+
+# Secrets (No hardcoded credentials)
+secrets:
+  name: "mcp-platform-secrets"
+  llmProvider: "gemini" # gemini or groq
+  llmModel: "gemini-2.0-flash"
+  llmApiKey: "" # Injected at runtime or helm set
+  wcConsumerKey: "ck_demo"
+  wcConsumerSecret: "cs_demo"
+
+# Network Isolation
+networkPolicy:
+  enabled: true

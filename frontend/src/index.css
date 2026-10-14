@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+/* In v4, theme customization happens here using standard CSS variables 
+  if you need to extend the default theme.
+*/
+@theme {
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-600: #2563eb;
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+/* Custom Utilities */
+body {
+  background-color: var(--color-gray-50);
+  color: var(--color-gray-900);
+}

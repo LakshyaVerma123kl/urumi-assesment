@@ -1,0 +1,55 @@
+{{- if .Values.networkPolicy.enabled -}}
+# Internal Upstream MCP Server Isolation
+# Only the MCP Gateway pod is permitted to call upstream MCP servers.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: isolate-upstream-mcp-servers
+  labels:
+    app.kubernetes.io/name: mcp-platform
+    app.kubernetes.io/component: security
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - {{ .Values.woocommerceMcp.name }}
+          - {{ .Values.timeMcp.name }}
+          - {{ .Values.calculatorMcp.name }}
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow traffic ONLY from the mcp-gateway pod
+    - from:
+        - podSelector:
+            matchLabels:
+              app: {{ .Values.gateway.name }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.woocommerceMcp.service.port }}
+        - protocol: TCP
+          port: {{ .Values.timeMcp.service.port }}
+        - protocol: TCP
+          port: {{ .Values.calculatorMcp.service.port }}
+---
+# Gateway Ingress Policy
+# Gateway allows incoming traffic from Ingress controller and Frontend
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-gateway-ingress
+  labels:
+    app.kubernetes.io/name: mcp-platform
+    app.kubernetes.io/component: security
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Values.gateway.name }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: {{ .Values.gateway.service.port }}
+{{- end }}

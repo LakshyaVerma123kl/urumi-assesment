@@ -1,0 +1,152 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app: mysql
+    store: "{{ .Values.store.id }}"
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  serviceName: mysql
+  replicas: 1
+  podManagementPolicy: OrderedReady
+  template:
+    metadata:
+      labels:
+        app: mysql
+        store: "{{ .Values.store.id }}"
+    spec:
+      securityContext:
+        fsGroup: 999  # mysql group
+      containers:
+      - name: mysql
+        image: "{{ .Values.mysql.image }}"
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 999  # mysql user
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+            add:
+              - CHOWN
+              - SETGID
+              - SETUID
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: store-secrets
+              key: mysql-root-password
+        - name: MYSQL_DATABASE
+          value: wordpress
+        - name: MYSQL_USER
+          value: wordpress
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: store-secrets
+              key: mysql-password
+        ports:
+        - containerPort: 3306
+          name: mysql
+          protocol: TCP
+        
+        # --- FIXED STARTUP PROBE ---
+        # Changed to only check ROOT ping. 
+        # The previous version failed because it tried to log in as 'wordpress' 
+        # before the user was created.
+        startupProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - mysqladmin ping -h localhost -u root -p${MYSQL_ROOT_PASSWORD}
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 30  # 30 * 10s = 5 minutes max startup time
+        
+        # READINESS PROBE: Keep this strict (checks if app can actually connect)
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - |
+              mysqladmin ping -h localhost -u root -p${MYSQL_ROOT_PASSWORD} &&
+              mysql -h localhost -u wordpress -p${MYSQL_PASSWORD} -e "SELECT 1" wordpress
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # LIVENESS PROBE: Restarts container if MySQL becomes unresponsive
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - mysqladmin ping -h localhost -u root -p${MYSQL_ROOT_PASSWORD}
+          initialDelaySeconds: 0
+          periodSeconds: 20
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 5
+        
+        # RESOURCE LIMITS
+        resources:
+          requests:
+            memory: "{{ .Values.mysql.resources.requests.memory }}"
+            cpu: "{{ .Values.mysql.resources.requests.cpu }}"
+          limits:
+            memory: "{{ .Values.mysql.resources.limits.memory }}"
+            cpu: "{{ .Values.mysql.resources.limits.cpu }}"
+        volumeMounts:
+        - name: mysql-data
+          mountPath: /var/lib/mysql
+        - name: mysql-config
+          mountPath: /etc/mysql/conf.d
+      volumes:
+      - name: mysql-config
+        configMap:
+          name: mysql-config
+          optional: true
+  volumeClaimTemplates:
+  - metadata:
+      name: mysql-data
+      labels:
+        app: mysql
+        store: "{{ .Values.store.id }}"
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      {{- if .Values.mysql.storageClass }}
+      storageClassName: "{{ .Values.mysql.storageClass }}"
+      {{- end }}
+      resources:
+        requests:
+          storage: "{{ .Values.mysql.storage }}"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app: mysql
+    store: "{{ .Values.store.id }}"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3306
+    targetPort: mysql
+    protocol: TCP
+    name: mysql
+  selector:
+    app: mysql

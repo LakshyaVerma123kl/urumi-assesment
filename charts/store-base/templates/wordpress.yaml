@@ -1,0 +1,151 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app: wordpress
+    store: "{{ .Values.store.id }}"
+spec:
+  replicas: {{ .Values.wordpress.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: wordpress
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        store: "{{ .Values.store.id }}"
+    spec:
+      securityContext:
+        fsGroup: 33  # www-data group
+      containers:
+      - name: wordpress
+        image: "{{ .Values.wordpress.image }}"
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 33  # www-data user
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false  # WordPress needs to write
+          capabilities:
+            drop:
+              - ALL
+            add:
+              - CHOWN
+              - SETGID
+              - SETUID
+        env:
+        # Use StatefulSet pod name for headless service compatibility
+        - name: WORDPRESS_DB_HOST
+          value: "mysql.{{ .Release.Namespace }}.svc.cluster.local:3306"
+        - name: WORDPRESS_DB_USER
+          value: wordpress
+        - name: WORDPRESS_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: store-secrets
+              key: mysql-password
+        - name: WORDPRESS_DB_NAME
+          value: wordpress
+        - name: WORDPRESS_TABLE_PREFIX
+          value: wp_
+        - name: WORDPRESS_CONFIG_EXTRA
+          value: |
+            /* Behind reverse proxy configuration */
+            if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+              $_SERVER['HTTPS'] = 'on';
+            }
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        
+        # --- PROBES (UPDATED) ---
+        
+        # STARTUP: Checks if port 80 is open (TCP)
+        startupProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 60
+        
+        # READINESS: CHANGED TO TCP SOCKET (Fixes the timeout issue)
+        # Instead of checking if the PHP page loads (which might hang on DB),
+        # we just check if Apache is listening on port 80.
+        readinessProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # LIVENESS: TCP check to keep it alive
+        livenessProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 60
+          periodSeconds: 20
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+
+        resources:
+          requests:
+            memory: "{{ .Values.wordpress.resources.requests.memory }}"
+            cpu: "{{ .Values.wordpress.resources.requests.cpu }}"
+          limits:
+            memory: "{{ .Values.wordpress.resources.limits.memory }}"
+            cpu: "{{ .Values.wordpress.resources.limits.cpu }}"
+        volumeMounts:
+        - name: wp-data
+          mountPath: /var/www/html
+      volumes:
+      - name: wp-data
+        persistentVolumeClaim:
+          claimName: wp-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wp-pvc
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app: wordpress
+    store: "{{ .Values.store.id }}"
+spec:
+  accessModes: [ "ReadWriteOnce" ]
+  {{- if .Values.wordpress.storageClass }}
+  storageClassName: "{{ .Values.wordpress.storageClass }}"
+  {{- end }}
+  resources:
+    requests:
+      storage: "{{ .Values.wordpress.storage }}"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app: wordpress
+    store: "{{ .Values.store.id }}"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    app: wordpress

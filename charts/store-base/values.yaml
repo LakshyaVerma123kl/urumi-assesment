@@ -1,0 +1,84 @@
+# Store Configuration
+store:
+  id: "default"
+  domain: "127.0.0.1.nip.io"  # Use nip.io for local development
+
+# MySQL Configuration
+mysql:
+  image: "mysql:5.7"
+  storage: "2Gi"
+  storageClass: ""  # Use default storage class
+  rootPassword: ""  # Injected by Orchestrator
+  userPassword: ""  # Injected by Orchestrator
+  
+  # Resource Limits - INCREASED for better startup performance
+  resources:
+    requests:
+      memory: "512Mi"  # Increased from 256Mi
+      cpu: "200m"      # Increased from 100m
+    limits:
+      memory: "1Gi"    # Increased from 512Mi
+      cpu: "1000m"     # Increased from 500m
+
+# WordPress Configuration
+wordpress:
+  image: "wordpress:php8.2-apache"
+  storage: "2Gi"
+  storageClass: ""  # Use default storage class
+  replicas: 1
+  
+  # Resource Limits - INCREASED for better performance
+  resources:
+    requests:
+      memory: "512Mi"  # Increased from 256Mi
+      cpu: "200m"      # Increased from 100m
+    limits:
+      memory: "1Gi"    # Increased from 512Mi
+      cpu: "1000m"     # Increased from 500m
+
+# Ingress Configuration
+ingress:
+  className: "nginx"
+  tls:
+    enabled: false  # Disabled for local
+    clusterIssuer: "letsencrypt-prod"
+  annotations: {}
+
+# Resource Quota (Namespace Isolation) - ADJUSTED for new limits
+resourceQuota:
+  enabled: true
+  requests:
+    cpu: "2000m"      # Increased from 1000m to accommodate new limits
+    memory: "4Gi"     # Increased from 2Gi
+    storage: "10Gi"
+  limits:
+    cpu: "4000m"      # Increased from 2000m
+    memory: "8Gi"     # Increased from 4Gi
+  persistentvolumeclaims: "5"
+  pods: "10"
+
+# Limit Range (Default Pod Limits) - ADJUSTED for new defaults
+limitRange:
+  enabled: true
+  container:
+    max:
+      cpu: "2000m"    # Increased from 1000m
+      memory: "2Gi"   # Increased from 1Gi
+    min:
+      cpu: "10m"
+      memory: "32Mi"
+    default:
+      cpu: "500m"     # Increased from 200m
+      memory: "512Mi" # Increased from 256Mi
+    defaultRequest:
+      cpu: "200m"     # Increased from 100m
+      memory: "256Mi" # Increased from 128Mi
+  pvc:
+    max:
+      storage: "5Gi"
+    min:
+      storage: "100Mi"
+
+# Network Policy (Security Isolation)
+networkPolicy:
+  enabled: true

@@ -1,0 +1,92 @@
+# Production Values for VPS (k3s) Deployment
+# Override values.yaml for production environment
+
+# Store Configuration
+store:
+  domain: "yourdomain.com"  # CHANGE THIS to your actual domain
+
+# MySQL Configuration
+mysql:
+  image: "mysql:5.7"
+  storage: "10Gi"  # Larger storage for production
+  storageClass: "local-path"  # k3s default storage class
+  
+  # Production Resource Limits
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+# WordPress Configuration
+wordpress:
+  image: "wordpress:php8.2-apache"
+  storage: "10Gi"  # Larger storage for production
+  storageClass: "local-path"  # k3s default storage class
+  replicas: 2  # Run 2 replicas for HA
+  
+  # Production Resource Limits
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+# Ingress Configuration
+ingress:
+  className: "traefik"  # k3s uses Traefik by default
+  tls:
+    enabled: true  # Enable TLS in production
+    clusterIssuer: "letsencrypt-prod"
+  annotations:
+    # Rate limiting
+    traefik.ingress.kubernetes.io/ratelimit.average: "100"
+    traefik.ingress.kubernetes.io/ratelimit.burst: "50"
+    # Security headers
+    traefik.ingress.kubernetes.io/headers.sslredirect: "true"
+    traefik.ingress.kubernetes.io/headers.stsSeconds: "31536000"
+    traefik.ingress.kubernetes.io/headers.stsIncludeSubdomains: "true"
+    traefik.ingress.kubernetes.io/headers.stsPreload: "true"
+
+# Resource Quota (Stricter for production)
+resourceQuota:
+  enabled: true
+  requests:
+    cpu: "2000m"      # 2 CPUs
+    memory: "4Gi"
+    storage: "50Gi"
+  limits:
+    cpu: "4000m"      # 4 CPUs
+    memory: "8Gi"
+  persistentvolumeclaims: "10"
+  pods: "20"
+
+# Limit Range (Stricter defaults)
+limitRange:
+  enabled: true
+  container:
+    max:
+      cpu: "2000m"
+      memory: "2Gi"
+    min:
+      cpu: "50m"
+      memory: "64Mi"
+    default:
+      cpu: "500m"
+      memory: "512Mi"
+    defaultRequest:
+      cpu: "250m"
+      memory: "256Mi"
+  pvc:
+    max:
+      storage: "20Gi"
+    min:
+      storage: "1Gi"
+
+# Network Policy (Always enabled in production)
+networkPolicy:
+  enabled: true

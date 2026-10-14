@@ -1,0 +1,34 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: store-ingress
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app: store
+    store: "{{ .Values.store.id }}"
+  annotations:
+    {{- if .Values.ingress.annotations }}
+    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+    {{- end }}
+    {{- if .Values.ingress.tls.enabled }}
+    cert-manager.io/cluster-issuer: "{{ .Values.ingress.tls.clusterIssuer }}"
+    {{- end }}
+spec:
+  ingressClassName: "{{ .Values.ingress.className }}"
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+  - hosts:
+    - "{{ .Values.store.id }}.{{ .Values.store.domain }}"
+    secretName: "{{ .Values.store.id }}-tls"
+  {{- end }}
+  rules:
+  - host: "{{ .Values.store.id }}.{{ .Values.store.domain }}"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: wordpress
+            port:
+              number: 80

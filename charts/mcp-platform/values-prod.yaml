@@ -1,0 +1,70 @@
+# Production values for VPS (k3s) Deployment
+# Overrides values.yaml with domain, TLS, higher replicas, and production settings.
+
+domain: "yourdomain.com" # Replace with your real domain or VPS IP nip.io
+
+gateway:
+  replicaCount: 2 # High Availability
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+
+frontend:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
+
+woocommerceMcp:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: "150m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+timeMcp:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "128Mi"
+
+calculatorMcp:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "128Mi"
+
+ingress:
+  enabled: true
+  className: "traefik" # Default in k3s
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
+    traefik.ingress.kubernetes.io/router.tls: "true"
+  dashboardHost: "dashboard.yourdomain.com"
+  gatewayHost: "gateway.yourdomain.com"
+  tls:
+    enabled: true
+    secretName: "mcp-platform-tls"
+
+networkPolicy:
+  enabled: true

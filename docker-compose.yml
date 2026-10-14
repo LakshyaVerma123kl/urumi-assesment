@@ -1,0 +1,105 @@
+# Docker Compose for MCP Gateway Platform
+# Runs all 5 services + the dashboard in containers.
+#
+# Usage:
+#   docker compose up --build        # Build and start all services
+#   docker compose up -d             # Start in background
+#   docker compose down              # Stop all services
+#   docker compose logs -f backend   # Follow logs for a specific service
+
+services:
+  # ── WooCommerce MCP Server (Layer 2) ──────────────
+  woocommerce-mcp:
+    build: ./woocommerce-mcp-server
+    container_name: woocommerce-mcp
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - WC_URL=${WC_URL:-http://localhost:8080}
+      - WC_CONSUMER_KEY=${WC_CONSUMER_KEY:-ck_demo}
+      - WC_CONSUMER_SECRET=${WC_CONSUMER_SECRET:-cs_demo}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3002/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ── Time & Utility MCP Server ─────────────────────
+  time-mcp:
+    build: ./time-mcp-server
+    container_name: time-mcp
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3003/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ── Calculator MCP Server ─────────────────────────
+  calculator-mcp:
+    build: ./calculator-mcp-server
+    container_name: calculator-mcp
+    ports:
+      - "3004:3004"
+    environment:
+      - PORT=3004
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3004/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ── MCP Gateway Backend (Layer 3) ─────────────────
+  mcp-gateway:
+    build: ./backend
+    container_name: mcp-gateway
+    ports:
+      - "3001:3001"
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      - PORT=3001
+      - DB_PATH=/app/data/gateway.db
+      - WC_MCP_URL=http://woocommerce-mcp:3002/mcp
+      - TIME_MCP_URL=http://time-mcp:3003/mcp
+      - CALC_MCP_URL=http://calculator-mcp:3004/mcp
+      - LLM_PROVIDER=${LLM_PROVIDER:-gemini}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_MODEL=${LLM_MODEL:-gemini-3.5-flash-lite}
+    volumes:
+      - gateway-data:/app/data
+    depends_on:
+      woocommerce-mcp:
+        condition: service_healthy
+      time-mcp:
+        condition: service_healthy
+      calculator-mcp:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ── Frontend Dashboard (Layer 3 UI) ───────────────
+  frontend:
+    build: ./frontend
+    container_name: mcp-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      mcp-gateway:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  gateway-data:
