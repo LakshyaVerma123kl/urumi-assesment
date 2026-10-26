@@ -2,17 +2,19 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import {
   Store, Plus, ExternalLink, Trash2, Loader2, RefreshCw,
-  CheckCircle2, XCircle, Server, Users, MessageSquare,
-  ClipboardList, Key, Send, Bot, Globe
+  CheckCircle2, XCircle, Server, Users, Shield, MessageSquare,
+  ClipboardList, Key, LogOut, Send, Bot, Globe, Power,
+  PowerOff, Zap, Copy
 } from "lucide-react";
 
 const API = import.meta.env.VITE_API_BASE || (window.location.port === "5173" || window.location.port === "3000" ? "http://localhost:3001" : "");
+const DEFAULT_ADMIN_KEY = "gw_418ddc77cce0462db8ca3d020f941269";
 
 // ─────────────────────────────────────────────
 // MAIN APP — Tab-based dashboard
 // ─────────────────────────────────────────────
 export default function App() {
-  const [apiKey, setApiKey] = useState(localStorage.getItem("gw_api_key") || "");
+  const [apiKey, setApiKey] = useState(localStorage.getItem("gw_api_key") || DEFAULT_ADMIN_KEY);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -21,18 +23,22 @@ export default function App() {
   const api = useCallback(() => {
     return axios.create({
       baseURL: API,
-      headers: { Authorization: `Bearer ${apiKey}` }
+      headers: { Authorization: `Bearer ${apiKey.trim()}` }
     });
   }, [apiKey]);
 
-  const login = async () => {
-    if (!apiKey.trim()) return;
+  const login = async (keyOverride) => {
+    const key = (typeof keyOverride === "string" ? keyOverride : apiKey).trim();
+    if (!key) return;
     setLoading(true);
     setError("");
     try {
-      const res = await api().post("/api/auth/login");
+      const res = await axios.post(`${API}/api/auth/login`, {}, {
+        headers: { Authorization: `Bearer ${key}` }
+      });
       setUser(res.data.user);
-      localStorage.setItem("gw_api_key", apiKey);
+      setApiKey(key);
+      localStorage.setItem("gw_api_key", key);
     } catch (err) {
       setError(err.response?.data?.error || "Login failed. Check your API key.");
     } finally {
@@ -66,24 +72,51 @@ export default function App() {
           <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
             <label className="block text-sm font-medium text-indigo-200 mb-2">API Key</label>
             <input
-              type="password"
+              type="text"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && login()}
-              placeholder="gw_xxxxxxxxxxxxxxxx"
+              placeholder="gw_418ddc77cce0462db8ca3d020f941269"
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono text-sm"
             />
-            {error && <p className="text-red-400 text-sm mt-2 flex items-center gap-1"><XCircle className="w-4 h-4" />{error}</p>}
+            {error && (
+              <div className="mt-3 p-3 bg-red-500/20 border border-red-500/30 rounded-xl">
+                <p className="text-red-300 text-sm flex items-center gap-1.5"><XCircle className="w-4 h-4 shrink-0" />{error}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setApiKey(DEFAULT_ADMIN_KEY);
+                    login(DEFAULT_ADMIN_KEY);
+                  }}
+                  className="mt-2 text-xs text-indigo-300 hover:text-white underline font-medium block"
+                >
+                  Click here to use Default Admin Key
+                </button>
+              </div>
+            )}
             <button
-              onClick={login}
-              disabled={loading || !apiKey}
+              onClick={() => login()}
+              disabled={loading || !apiKey.trim()}
               className="w-full mt-4 bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Key className="w-5 h-5" />}
               Authenticate
             </button>
+            <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-indigo-200">
+              <span>Admin Key: <code className="bg-white/10 px-1.5 py-0.5 rounded text-white font-mono">gw_418ddc...</code></span>
+              <button
+                type="button"
+                onClick={() => {
+                  setApiKey(DEFAULT_ADMIN_KEY);
+                  login(DEFAULT_ADMIN_KEY);
+                }}
+                className="text-indigo-400 hover:text-indigo-200 font-medium underline"
+              >
+                Auto-fill & Login
+              </button>
+            </div>
           </div>
-          <p className="text-center text-white/30 text-xs mt-6">Connect with your gateway API key. Ask your admin if you don't have one.</p>
+          <p className="text-center text-white/30 text-xs mt-6">Connect with your gateway API key. Default admin key pre-configured.</p>
         </div>
       </div>
     );

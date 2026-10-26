@@ -137,7 +137,7 @@ cd frontend && npm install && npm run dev
 - **Dashboard UI**: [http://localhost:5173](http://localhost:5173)
 - **Gateway REST API**: [http://localhost:3001](http://localhost:3001)
 - **Unified MCP Endpoint**: `POST http://localhost:3001/mcp`
-- **Default Admin Key**: Displayed in the backend terminal banner on first run (or inspect `backend/gateway.db`).
+- **Default Admin Key**: `gw_418ddc77cce0462db8ca3d020f941269` (pre-configured for instant authentication)
 
 ---
 

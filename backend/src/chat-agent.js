@@ -8,12 +8,13 @@
  * in the audit log under that user's identity.
  */
 
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const { getAllTools, callTool } = require('./mcp-gateway');
 
 // --- Configuration ---
 const LLM_PROVIDER = process.env.LLM_PROVIDER || 'gemini'; // 'gemini' or 'groq'
-const LLM_API_KEY = process.env.LLM_API_KEY || '';
+const LLM_API_KEY = process.env.LLM_API_KEY || (LLM_PROVIDER === 'groq' ? process.env.GROQ_API_KEY : '') || process.env.GROQ_API_KEY || '';
 const LLM_MODEL = process.env.LLM_MODEL || (LLM_PROVIDER === 'gemini' ? 'gemini-3.5-flash-lite' : 'qwen/qwen3.8-27b');
 
 // Provider configs

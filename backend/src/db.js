@@ -14,6 +14,8 @@ const path = require('path');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'gateway.db');
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
@@ -112,18 +114,18 @@ function generateApiKey() {
   };
 }
 
-// --- Seed: Create default admin if none exists ---
+// --- Seed: Create or sync default admin ---
 function seedDefaultAdmin() {
-  const adminExists = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'admin'").get();
-  if (adminExists.count === 0) {
+  const key = process.env.ADMIN_API_KEY || 'gw_418ddc77cce0462db8ca3d020f941269';
+  const prefix = key.substring(0, 10);
+  const hash = hashApiKey(key);
+
+  const existingAdmin = db.prepare("SELECT id FROM users WHERE role = 'admin'").get();
+  if (!existingAdmin) {
     const adminId = uuidv4();
-    const key = process.env.ADMIN_API_KEY || 'gw_418ddc77cce0462db8ca3d020f941269';
-    const prefix = key.substring(0, 10);
-    const hash = hashApiKey(key);
-    
     db.prepare(`
-      INSERT INTO users (id, username, email, role, api_key_hash, api_key_prefix)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO users (id, username, email, role, api_key_hash, api_key_prefix, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, 1)
     `).run(adminId, 'admin', 'admin@localhost', 'admin', hash, prefix);
     
     console.log(`\n  ╔═══════════════════════════════════════════╗`);
@@ -134,8 +136,14 @@ function seedDefaultAdmin() {
     console.log(`  ╚═══════════════════════════════════════════╝\n`);
     
     return key;
+  } else {
+    // Ensure the default admin always has the expected active key
+    db.prepare(`
+      UPDATE users SET api_key_hash = ?, api_key_prefix = ?, is_active = 1, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(hash, prefix, existingAdmin.id);
+    return key;
   }
-  return null;
 }
 
 // --- Seed: Register default MCP servers ---

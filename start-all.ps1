@@ -26,11 +26,12 @@ Start-Sleep -Seconds 2
 
 # 5. Start Frontend (Port 5173)
 Write-Host "[5/5] Starting Frontend Dashboard on port 5173..." -ForegroundColor Yellow
-Start-Process -NoNewWindow npx -ArgumentList "vite --port 5173" -WorkingDirectory "$PSScriptRoot\frontend"
+Start-Process -NoNewWindow node -ArgumentList "./node_modules/vite/bin/vite.js --port 5173 --host" -WorkingDirectory "$PSScriptRoot\frontend"
 
 Write-Host "`n==================================================" -ForegroundColor Green
 Write-Host "  All services started successfully!" -ForegroundColor Green
 Write-Host "  Dashboard: http://localhost:5173" -ForegroundColor Green
 Write-Host "  Gateway API: http://localhost:3001" -ForegroundColor Green
 Write-Host "  MCP Endpoint: POST http://localhost:3001/mcp" -ForegroundColor Green
+Write-Host "  Default Admin Key: gw_418ddc77cce0462db8ca3d020f941269" -ForegroundColor Green
 Write-Host "==================================================" -ForegroundColor Green

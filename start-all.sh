@@ -5,6 +5,10 @@ echo "=================================================="
 echo "  Starting Team MCP Gateway & WooCommerce Platform"
 echo "=================================================="
 
+# Always run from the repo root directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 # 1. Start WooCommerce MCP Server (Port 3002)
 echo "[1/5] Starting WooCommerce MCP Server on port 3002..."
 (cd woocommerce-mcp-server && node src/server.js) &
@@ -31,7 +35,11 @@ sleep 2
 
 # 5. Start Frontend (Port 5173)
 echo "[5/5] Starting Frontend Dashboard on port 5173..."
-(cd frontend && npx vite --port 5173) &
+if [ -f "frontend/node_modules/vite/bin/vite.js" ]; then
+  (cd frontend && node ./node_modules/vite/bin/vite.js --port 5173 --host) &
+else
+  (cd frontend && npm run dev -- --port 5173 --host) &
+fi
 PID_FE=$!
 
 echo "=================================================="
@@ -39,7 +47,8 @@ echo "  All services started successfully!"
 echo "  Dashboard: http://localhost:5173"
 echo "  Gateway API: http://localhost:3001"
 echo "  MCP Endpoint: POST http://localhost:3001/mcp"
+echo "  Default Admin Key: gw_418ddc77cce0462db8ca3d020f941269"
 echo "=================================================="
 
-trap "kill $PID_WC $PID_TIME $PID_CALC $PID_GW $PID_FE" SIGINT SIGTERM EXIT
+trap "kill $PID_WC $PID_TIME $PID_CALC $PID_GW $PID_FE 2>/dev/null" SIGINT SIGTERM EXIT
 wait
