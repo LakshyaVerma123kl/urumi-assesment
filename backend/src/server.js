@@ -17,11 +17,11 @@ const path = require('path');
 
 
 // --- Modules ---
-const { db, hashApiKey, generateApiKey } = require('./db');
+const { db, generateApiKey } = require('./db');
 const { authMiddleware, adminOnly, logAudit } = require('./auth');
 const { 
   handleMcpRequest, startHealthChecks, refreshAllTools, 
-  healthCheckAll, getAllTools, removeClient 
+  getAllTools, removeClient 
 } = require('./mcp-gateway');
 const { runChatAgent } = require('./chat-agent');
 
@@ -559,8 +559,6 @@ app.get('/api/tools', authMiddleware(false), async (req, res) => {
   const tools = await getAllTools();
   res.json(tools);
 });
-
-
 
 app.get('/api/metrics', (req, res) => {
   const stats = {

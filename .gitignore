@@ -41,4 +41,8 @@ Thumbs.db
 # Helm & Kubernetes Credentials
 kubeconfig
 .kube/
-*.tgz
+*.tgz
+
+# Local Guide & Script Notes
+DEMO_VIDEO_SCRIPT.md
+DEPLOYMENT_GUIDE.md

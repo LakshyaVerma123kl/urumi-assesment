@@ -2,10 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import {
   Store, Plus, ExternalLink, Trash2, Loader2, RefreshCw,
-  CheckCircle2, XCircle, Server, Users, Shield, MessageSquare,
-  ClipboardList, Settings, Key, LogOut, Eye, EyeOff, Send,
-  Power, PowerOff, Edit, Copy, AlertTriangle, Clock, Zap,
-  Activity, Bot, ChevronRight, Globe, Lock, Hash
+  CheckCircle2, XCircle, Server, Users, MessageSquare,
+  ClipboardList, Key, Send, Bot, Globe
 } from "lucide-react";
 
 const API = import.meta.env.VITE_API_BASE || (window.location.port === "5173" || window.location.port === "3000" ? "http://localhost:3001" : "");

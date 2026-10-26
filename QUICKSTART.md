@@ -30,11 +30,12 @@ Also install Node.js 18+:
 git clone <your-repo-url> urumi-platform
 cd urumi-platform
 
-# Make scripts executable (Linux/macOS)
+# On Linux/macOS:
 chmod +x deploy/*.sh
+./deploy/setup.sh
 
-# Run setup
-./deploy/setup-local.sh
+# On Windows (PowerShell):
+.\deploy\setup.ps1
 ```
 
 Expected output:

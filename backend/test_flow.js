@@ -1,7 +1,7 @@
 const axios = require('axios');
 
-const API_BASE = 'http://localhost:3001';
-const ADMIN_KEY = 'gw_418ddc77cce0462db8ca3d020f941269';
+const API_BASE = process.env.API_BASE || 'http://localhost:3001';
+const ADMIN_KEY = process.env.ADMIN_KEY || 'gw_418ddc77cce0462db8ca3d020f941269';
 
 async function runTests() {
   console.log('🚀 Starting Comprehensive End-to-End Test Suite...\n');
