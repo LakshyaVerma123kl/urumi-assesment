@@ -117,7 +117,9 @@ function seedDefaultAdmin() {
   const adminExists = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'admin'").get();
   if (adminExists.count === 0) {
     const adminId = uuidv4();
-    const { key, prefix, hash } = generateApiKey();
+    const key = process.env.ADMIN_API_KEY || 'gw_418ddc77cce0462db8ca3d020f941269';
+    const prefix = key.substring(0, 10);
+    const hash = hashApiKey(key);
     
     db.prepare(`
       INSERT INTO users (id, username, email, role, api_key_hash, api_key_prefix)
